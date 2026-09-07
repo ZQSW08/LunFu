@@ -4,30 +4,49 @@ if nargin<1,tag='auto_reference_validation_v1';end
 if nargin<2,scenarios={'slow','fast6','overlap','weak','null','occlusion','ambiguous','axis_y','axis_xy'};end
 root=fileparts(mfilename('fullpath'));addpath(root);test_auto_reference();out=fullfile(root,'outputs',tag);
 assert(~isfolder(out),'Validation output exists; choose a new tag');mkdir(out);videoRoot=fullfile(out,'videos');mkdir(videoRoot);rows=struct([]);
+write_manifest(out,tag,scenarios);
 for s=1:numel(scenarios)
-    scenario=scenarios{s};video=fullfile(videoRoot,[scenario '.avi']);truth=generate_video(video,scenario);
-    save(fullfile(videoRoot,[scenario '_truth.mat']),'-struct','truth');
-    if s==1,verify_filename_invariance(video,truth,out);end
+    scenario=scenarios{s};video=fullfile(videoRoot,[scenario '.avi']);truth=[];generationError='';
+    try
+        truth=generate_video(video,scenario);save(fullfile(videoRoot,[scenario '_truth.mat']),'-struct','truth');
+        if s==1
+            try,verify_filename_invariance(video,truth,out);catch ex
+                generationError=sprintf('filename_invariance: %s',ex.message);
+                write_text(fullfile(out,'filename_invariance_error.txt'),getReport(ex));
+            end
+        end
+    catch ex
+        generationError=ex.message;write_text(fullfile(videoRoot,[scenario '_generation_error.txt']),getReport(ex));
+    end
     for method={'manual','automatic'}
-        mode=method{1};u=mfm.real_defaults();u.videoPath=video;u.outputRoot=fullfile(out,mode);u.captureFPS=truth.fs;u.maxFrames=truth.frames;
-        u.roiMode='manual';u.targetROI=truth.targetROI;u.axis=truth.axis;u.targetMode=truth.targetMode;u.referenceModel='translation';
-        u.referenceTracker='anchor';u.showFigures=false;u.exportFigures=false;u.denoise=false;u.autoProfileRows=false;
-        if strcmp(mode,'manual'),u.referenceSelection='manual';u.referenceROIs=truth.manualReferenceROI;
-        else,u.referenceSelection='automatic';u.referenceROIs=[];u.searchROI=truth.searchROI;u.automaticReferenceCount=8;end
-        r=run_real_video(u);row=evaluate_run(r,truth,scenario,mode);
-        if strcmp(mode,'automatic')
-            row.selectedReferences=size(r.roiProvenance.referenceROIs,1);
-            row.selectedTopGroup=sum((r.roiProvenance.referenceROIs(:,2)+r.roiProvenance.referenceROIs(:,4)/2)<230);
-            assert(row.selectedReferences==8,'Automatic selector did not provide eight dispersed candidates');
-            if strcmp(scenario,'ambiguous'),assert(row.ambiguousRejectedFrames>100,'Competing reference motion groups were not rejected');end
-            if strcmp(scenario,'occlusion'),assert(row.insufficientReferenceFrames>=30&&row.failureTotalRetention>.5,'Reference loss did not preserve target total with relative gaps');end
-            if strcmp(scenario,'axis_y'),assert(nnz(isfinite(r.relative(:,1)))==1&&nnz(isfinite(r.relative(:,2)))>1,'axis=y output contract failed');end
-            if strcmp(scenario,'axis_xy'),assert(nnz(all(isfinite(r.relative),2))>1&&~r.orthogonalCoordinateIsGuide,'axis=xy output contract failed');end
+        mode=method{1};row=empty_row(scenario,mode);row.error=generationError;
+        try
+            assert(isstruct(truth)&&~isempty(fieldnames(truth)),'Video generation failed: %s',generationError);
+            u=mfm.real_defaults();u.videoPath=video;u.outputRoot=fullfile(out,mode);u.captureFPS=truth.fs;u.maxFrames=truth.frames;
+            u.roiMode='manual';u.targetROI=truth.targetROI;u.axis=truth.axis;u.targetMode=truth.targetMode;u.referenceModel='translation';
+            u.referenceTracker='anchor';u.showFigures=false;u.exportFigures=false;u.denoise=false;u.autoProfileRows=false;
+            if strcmp(mode,'manual'),u.referenceSelection='manual';u.referenceROIs=truth.manualReferenceROI;
+            else,u.referenceSelection='automatic';u.referenceROIs=[];u.searchROI=truth.searchROI;u.automaticReferenceCount=8;end
+            r=run_real_video(u);row=evaluate_run(r,truth,scenario,mode);row.status="measured";
+            contract={};
+            if strcmp(mode,'automatic')
+                row.selectedReferences=size(r.roiProvenance.referenceROIs,1);
+                row.selectedTopGroup=sum((r.roiProvenance.referenceROIs(:,2)+r.roiProvenance.referenceROIs(:,4)/2)<230);
+                if row.selectedReferences~=8,contract{end+1}='automatic selector did not provide eight references';end %#ok<AGROW>
+                if strcmp(scenario,'ambiguous')&&row.ambiguousRejectedFrames<=100,contract{end+1}='competing reference motion groups were not rejected';end %#ok<AGROW>
+                if strcmp(scenario,'occlusion')&&(row.rejectedReferenceFrames<30||row.failureTotalRetention<=.5),contract{end+1}='reference loss did not preserve target total with relative gaps';end %#ok<AGROW>
+                if strcmp(scenario,'axis_y')&&(nnz(isfinite(r.relative(:,1)))~=1||nnz(isfinite(r.relative(:,2)))<=1),contract{end+1}='axis=y output contract failed';end %#ok<AGROW>
+                if strcmp(scenario,'axis_xy')&&(nnz(all(isfinite(r.relative),2))<=1||r.orthogonalCoordinateIsGuide),contract{end+1}='axis=xy output contract failed';end %#ok<AGROW>
+            end
+            if ~isempty(contract),row.status="contract_failure";row.contractFailure=string(strjoin(contract,' | '));end
+            row.qualityStatus=classify_quality(row,scenario,mode);
+        catch ex
+            row.status="error";row.error=string(getReport(ex,'basic'));row.qualityStatus="error";
         end
         if isempty(rows),rows=row;else,rows(end+1)=row;end %#ok<AGROW>
         metrics=struct2table(rows);writetable(metrics,fullfile(out,'metrics.csv'));
-        fprintf('%s %-9s coverage %.3f rmse [%.4f %.4f] amp [%.3f %.3f] retained %.3f\n',...
-            scenario,mode,row.relativeCoverage,row.rmseX,row.rmseY,row.amplitudeRatioX,row.amplitudeRatioY,row.failureTotalRetention);
+        fprintf('%s %-9s status %-16s coverage %.3f raw-rmse [%.4f %.4f] amp [%.3f %.3f] seconds %.2f\n',...
+            scenario,mode,row.status,row.relativeCoverage,row.rawRmseX,row.rawRmseY,row.rawAmplitudeRatioX,row.rawAmplitudeRatioY,row.algorithmSeconds);
     end
 end
 metrics=struct2table(rows);writetable(metrics,fullfile(out,'metrics.csv'));
@@ -84,20 +103,62 @@ end
 
 function row=evaluate_run(r,truth,scenario,method)
 n=min(r.framesRead,truth.frames);measured=r.relative(1:n,:);z=truth.micro(1:n,:);t=truth.time(1:n);good=r.geometryValid(1:n);
-rmse=[NaN NaN];ratio=[NaN NaN];for a=1:2
-    ids=good&isfinite(measured(:,a));if any(ids),rmse(a)=sqrt(mean((measured(ids,a)-z(ids,a)).^2));ratio(a)=amplitude_ratio(measured(ids,a),z(ids,a),t(ids),truth.frequencyHz(min(a,numel(truth.frequencyHz))));end
+rmse=[NaN NaN];ratio=[NaN NaN];validSamples=[0 0];for a=1:2
+    ids=good&isfinite(measured(:,a));validSamples(a)=nnz(ids);if validSamples(a)>=2
+        rmse(a)=sqrt(mean((measured(ids,a)-z(ids,a)).^2));ratio(a)=amplitude_ratio(measured(ids,a),z(ids,a),t(ids),truth.frequencyHz(min(a,numel(truth.frequencyHz))));
+    end
 end
 axisIds=1;if strcmp(truth.axis,'y'),axisIds=2;elseif strcmp(truth.axis,'xy'),axisIds=1:2;end
 failure=~good;retained=false(n,1);total=reshape(r.displacements(1:n,1,:),[n 2]);retained(failure)=r.valid(failure,1)&all(isfinite(total(failure,:)),2)&all(isnan(measured(failure,axisIds)),2);
 retention=NaN;if any(failure),retention=mean(retained(failure));end
 if strcmp(r.cfg.referenceSelection,'automatic'),refSupport=r.referenceSupport(1:n);refSpread=r.referenceSpread(1:n);else,refSupport=sum(r.valid(1:n,2:end),2);refSpread=nan(n,1);end
 ambiguousRejected=sum(strcmp(r.referenceStatus(1:n),'ambiguous_motion_groups'));insufficientReference=sum(strcmp(r.referenceStatus(1:n),'insufficient_valid_references'));
-row=struct('scenario',scenario,'method',method,'axis',truth.axis,'frames',n,'relativeCoverage',mean(good),...
-    'targetCoverage',mean(r.valid(1:n,1)),'rmseX',rmse(1),'rmseY',rmse(2),'amplitudeRatioX',ratio(1),'amplitudeRatioY',ratio(2),...
-    'failureFrames',nnz(failure),'failureTotalRetention',retention,'meanReferenceSupport',mean(refSupport),...
-    'meanReferenceSpread',mean(refSpread,'omitnan'),'ambiguousRejectedFrames',ambiguousRejected,'insufficientReferenceFrames',insufficientReference,...
-    'selectedReferences',size(r.cfg.rois,1)-1,'selectedTopGroup',NaN,...
-    'algorithmSeconds',r.algorithmSeconds,'rawUnfiltered',true);
+rejectedReference=sum(~ismember(r.referenceStatus(1:n),{'ok','initial_reference_set'}));
+row=empty_row(scenario,method);row.axis=truth.axis;row.frames=n;row.relativeCoverage=mean(good);...
+    row.targetCoverage=mean(r.valid(1:n,1));row.rmseX=rmse(1);row.rmseY=rmse(2);row.amplitudeRatioX=ratio(1);row.amplitudeRatioY=ratio(2);...
+    row.rawRmseX=rmse(1);row.rawRmseY=rmse(2);row.rawAmplitudeRatioX=ratio(1);row.rawAmplitudeRatioY=ratio(2);row.validSamplesX=validSamples(1);row.validSamplesY=validSamples(2);...
+    row.rawRmsX=sqrt(mean(measured(:,1).^2,'omitnan'));row.rawRmsY=sqrt(mean(measured(:,2).^2,'omitnan'));...
+    row.truthRmsX=sqrt(mean(z(:,1).^2,'omitnan'));row.truthRmsY=sqrt(mean(z(:,2).^2,'omitnan'));
+    row.rmseToTruthRmsX=rmse(1)/max(eps,row.truthRmsX);row.rmseToTruthRmsY=rmse(2)/max(eps,row.truthRmsY);...
+    row.failureFrames=nnz(failure);row.failureTotalRetention=retention;row.meanReferenceSupport=mean(refSupport);...
+    row.meanReferenceSpread=mean(refSpread,'omitnan');row.ambiguousRejectedFrames=ambiguousRejected;row.insufficientReferenceFrames=insufficientReference;row.rejectedReferenceFrames=rejectedReference;...
+    row.selectedReferences=size(r.cfg.rois,1)-1;row.algorithmSeconds=r.algorithmSeconds;row.rawUnfiltered=true;
+end
+
+function row=empty_row(scenario,method)
+row=struct('scenario',scenario,'method',method,'axis','','frames',NaN,'relativeCoverage',NaN,'targetCoverage',NaN,...
+    'rmseX',NaN,'rmseY',NaN,'amplitudeRatioX',NaN,'amplitudeRatioY',NaN,'rawRmseX',NaN,'rawRmseY',NaN,'validSamplesX',NaN,'validSamplesY',NaN,'rawRmsX',NaN,'rawRmsY',NaN,...
+    'rawAmplitudeRatioX',NaN,'rawAmplitudeRatioY',NaN,'truthRmsX',NaN,'truthRmsY',NaN,'rmseToTruthRmsX',NaN,'rmseToTruthRmsY',NaN,...
+    'failureFrames',NaN,'failureTotalRetention',NaN,'meanReferenceSupport',NaN,'meanReferenceSpread',NaN,...
+    'ambiguousRejectedFrames',NaN,'insufficientReferenceFrames',NaN,'rejectedReferenceFrames',NaN,'selectedReferences',NaN,'selectedTopGroup',NaN,...
+    'algorithmSeconds',NaN,'rawUnfiltered',true,'status',"not_started",'contractFailure',"",'qualityStatus',"not_started",'error',"");
+end
+
+function quality=classify_quality(row,scenario,method)
+if strcmp(row.status,"error"),quality="error";return;end
+if strcmp(scenario,'occlusion')||(strcmp(scenario,'ambiguous')&&strcmp(method,'automatic'))
+    quality="rejection_case";return;
+end
+if strcmp(scenario,'null'),quality="null_reported";return;end
+ids=1;if strcmp(row.axis,'y'),ids=2;elseif strcmp(row.axis,'xy'),ids=1:2;end
+if any([row.validSamplesX row.validSamplesY](ids)<2),quality="insufficient_samples";return;end
+rmse=[row.rawRmseX row.rawRmseY];amp=[row.rawAmplitudeRatioX row.rawAmplitudeRatioY];truthRms=[row.truthRmsX row.truthRmsY];
+if strcmp(scenario,'weak'),rmseOK=all([row.rmseToTruthRmsX row.rmseToTruthRmsY](ids)<=.5);ampOK=true;else
+    rmseOK=all(rmse(ids)<.06);ampOK=all(isfinite(amp(ids))&amp(ids>=.8)&amp(ids<=1.2);
+end
+if row.relativeCoverage>=.95&&rmseOK&&ampOK,quality="pass";else,quality="fail";end
+end
+
+function write_manifest(out,tag,scenarios)
+thresholds=struct('normalCoverageMin',.95,'normalRawRmseMaxPx',.06,'normalAmplitudeRatioMin',.8,'normalAmplitudeRatioMax',1.2,...
+    'weakRmseToTruthRmsMax',.5,'nullUsesRawRms',true,'occlusionAndAmbiguous','report rejection and total-displacement retention separately');
+manifest=struct('tag',tag,'created',datestr(now,30),'scenarios',{scenarios},'thresholds',thresholds,...
+    'interpretation','Engineering acceptance conditions fixed before measurement; not universal accuracy claims. Pixel and amplitude metrics are raw unfiltered outputs.');
+write_text(fullfile(out,'manifest.json'),jsonencode(manifest,'PrettyPrint',true));
+end
+
+function write_text(path,txt)
+fid=fopen(path,'w');assert(fid>=0,'Cannot write %s',path);fwrite(fid,txt,'char');fclose(fid);
 end
 
 function ratio=amplitude_ratio(y,z,t,f)

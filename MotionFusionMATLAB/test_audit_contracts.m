@@ -18,3 +18,4 @@ assert(strcmp(s.status,'unfiltered_measurement')&&isempty(s.modesHz));
 test_contracts();
 fprintf('AUDIT CONTRACT PASS: filename invariance; explicit references; finite ROI; exact raw passthrough; gaps preserved.\n');
 end
+

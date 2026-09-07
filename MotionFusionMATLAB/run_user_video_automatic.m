@@ -26,5 +26,6 @@ u.analysisBandHz=[];        % 原始测量；[2 45]可增加宽带诊断
 u.denoise=false;
 u.showFigures=true;
 u.exportFigures=true;
+u.exportTrackingVideo=true;
 result=run_real_video(u);
 % 首帧图检查目标和自动候选；traces.csv查看reference_status与共识支持数。

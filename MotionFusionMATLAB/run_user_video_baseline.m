@@ -24,5 +24,6 @@ u.analysisBandHz=[2 45];        % 通用显示范围，应低于captureFPS/2
 u.denoise=true;                % 稳定模态诊断；不会替代原始相对位移
 u.showFigures=true;
 u.exportFigures=true;
+u.exportTrackingVideo=true;
 result=run_real_video(u);
 % 02/03为原始结果；04为可选宽带/模态图。缺测不插值。

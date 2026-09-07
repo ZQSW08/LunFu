@@ -28,9 +28,11 @@ while hasFrame(v)&&k<cfg.maxFrames
     if k==1
         trackers=cell(nr,1);
         for j=2:nr
-            if strcmp(cfg.referenceTracker,'tiles'),trackers{j}=mfm.TileReference(im,cfg.rois(j,:),cfg);
-            elseif strcmp(cfg.referenceTracker,'flow'),trackers{j}=mfm.FlowReference(im,cfg.rois(j,:),cfg);
-            else,trackers{j}=mfm.Tracker(im,cfg.rois(j,:),cfg);end
+            refCfg=cfg;
+            if automaticReference,refCfg.affine=cfg.automaticReferenceAffine;end
+            if strcmp(cfg.referenceTracker,'tiles'),trackers{j}=mfm.TileReference(im,cfg.rois(j,:),refCfg);
+            elseif strcmp(cfg.referenceTracker,'flow'),trackers{j}=mfm.FlowReference(im,cfg.rois(j,:),refCfg);
+            else,trackers{j}=mfm.Tracker(im,cfg.rois(j,:),refCfg);end
         end
         if strcmp(cfg.targetMode,'consensus'),trackers{1}=mfm.ConsensusProfile(im,cfg.rois(1,:),cfg);
         elseif strcmp(cfg.targetMode,'direct'),trackers{1}=mfm.DirectProfile(im,cfg.rois(1,:),cfg);

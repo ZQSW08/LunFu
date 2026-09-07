@@ -25,11 +25,18 @@ for j=1:numel(keys)
     writetable(dat,fullfile(out,['waveform_' key '.csv']));
     writetable(table(raw.frequency,raw.amplitude,'VariableNames',{'frequency_Hz','raw_amplitude_px'}),...
         fullfile(out,['spectrum_' key '.csv']));
+    normReference=max(raw.amplitude,[],'omitnan');
+    normalized=nan(size(raw.amplitude));
+    if isfinite(normReference)&&normReference>0,normalized=raw.amplitude/normReference;end
+    writetable(table(raw.frequency,normalized,'VariableNames',{'frequency_Hz','normalized_amplitude'}),...
+        fullfile(out,['spectrum_' key '_normalized.csv']));
     info=rmfield(s,{'raw','broad','clean'});info.measurementKind=kind;
     info.primarySpectrum='unfiltered measurement; linear detrend and Hann only';
     info.spectrumStartFrame=raw.startFrame;info.spectrumSamples=raw.samples;
     info.frequencyResolutionHz=raw.resolutionHz;info.targetCoverage=mean(isfinite(total));
     info.relativeCoverage=mean(isfinite(s.raw));info.accuracyValidated=false;
+    info.spectrumNormalization='raw amplitude divided by maximum finite raw amplitude; raw spectrum remains primary';
+    info.spectrumNormalizationReferencePx=normReference;
     if automatic
         info.referenceAssumption=r.referenceConsensusCaveat;
         info.referenceConsensusCoverage=mean(strcmp(r.referenceStatus,'ok'));
@@ -54,6 +61,12 @@ for j=1:numel(keys)
     nexttile;semilogy(raw.frequency,max(raw.amplitude,realmin),'Color',[0 .447 .698]);
     ylabel('Amplitude (px, log)');xlabel('Frequency (Hz)');grid on;xlim([0 r.fps/2]);
     saveFigure(f,['03_spectrum_' key]);
+    f=figure('Visible','off','Color','w','Position',[100 100 1100 500]);
+    plot(raw.frequency,normalized,'Color',[.494 .184 .556],'LineWidth',1);hold on;
+    yline(1,'--','Color',[.35 .35 .35]);grid on;xlim([0 r.fps/2]);ylim([0 1.05]);
+    xlabel('Frequency (Hz)');ylabel('Normalized amplitude (a/a_{max})');
+    title(sprintf('Normalized raw spectrum; reference %.5g px',normReference));
+    saveFigure(f,['03_spectrum_' key '_normalized']);
     if ~isempty(s.bandHz)
         f=figure('Visible','off','Color','w','Position',[100 100 1100 650]);
         tiledlayout(2,1);nexttile;plot(r.time,s.raw,'Color',[.65 .65 .65]);hold on;

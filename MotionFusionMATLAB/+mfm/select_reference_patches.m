@@ -21,19 +21,53 @@ for x=xs
 end
 end
 n=min(cfg.automaticReferenceCount,size(cand,1));chosen=zeros(0,1);centers=cand(:,1:2)+(cand(:,3:4)-1)/2;
+nx=0;ny=0;gridId=zeros(size(cand,1),1);
 if n>0
-    [~,first]=max(score);chosen=first;
+    % First assign candidates to a coarse grid derived only from the search
+    % rectangle and requested count.  Selecting at most one strong patch from
+    % each occupied cell prevents several high-texture corners of one object
+    % from consuming the whole reference budget.
+    aspect=searchROI(3)/max(eps,searchROI(4));
+    nx=max(1,ceil(sqrt(n*aspect)));ny=max(1,ceil(n/nx));
+    ux=(centers(:,1)-searchROI(1))/max(eps,searchROI(3));
+    uy=(centers(:,2)-searchROI(2))/max(eps,searchROI(4));
+    ix=min(nx,max(1,floor(ux*nx)+1));iy=min(ny,max(1,floor(uy*ny)+1));
+    gridId=(iy-1)*nx+ix;
+    cells=unique(gridId(:),'stable');
+    cellBest=zeros(numel(cells),1);cellScore=-Inf(numel(cells),1);
+    for j=1:numel(cells)
+        ids=find(gridId==cells(j));[~,q]=max(score(ids));cellBest(j)=ids(q);cellScore(j)=score(ids(q));
+    end
+    % Strong texture remains the first criterion; spatial coverage decides
+    % ties and fills any cells left after the requested count is reached.
+    [~,order]=sort(cellScore,'descend');
+    % A patch-sized exclusion is too weak for a textured object: adjacent
+    % corners can be separated by one patch width while still observing the
+    % same object.  Keep a modest margin so high-texture duplicates do not
+    % crowd out other spatial cells, while retaining the public spacing
+    % contract (>= .9*patchSize).
+    minDistance=1.15*min(p);
+    for j=1:numel(order)
+        if numel(chosen)>=n,break;end
+        candidate=cellBest(order(j));
+        if isempty(chosen)||all(hypot(centers(candidate,1)-centers(chosen,1),centers(candidate,2)-centers(chosen,2))>=minDistance)
+            chosen(end+1,1)=candidate; %#ok<AGROW>
+        end
+    end
     while numel(chosen)<n
-        d=inf(size(score));for j=1:numel(chosen),d=min(d,hypot(centers(:,1)-centers(chosen(j),1),centers(:,2)-centers(chosen(j),2)));end
-        texture=min(score,3*median(score))/max(eps,min(max(score),3*median(score)));
-        utility=.45*texture+.55*min(1,d/max(eps,hypot(searchROI(3),searchROI(4))));
-        utility(d<.9*min(p))=-Inf;utility(chosen)=-Inf;
-        [best,next]=max(utility);if ~isfinite(best),break;end;chosen(end+1,1)=next; %#ok<AGROW>
+        d=inf(size(score));
+        for j=1:numel(chosen),d=min(d,hypot(centers(:,1)-centers(chosen(j),1),centers(:,2)-centers(chosen(j),2)));end
+        base=max(eps,median(score));texture=min(score,3*base)/max(eps,3*base);
+        utility=d/max(eps,hypot(searchROI(3),searchROI(4)))+.10*texture;
+        utility(d<minDistance)=-Inf;utility(chosen)=-Inf;
+        [best,next]=max(utility);if ~isfinite(best),break;end
+        chosen(end+1,1)=next; %#ok<AGROW>
     end
 end
 rois=cand(chosen,:);selectedScores=score(chosen);status='ok';if size(rois,1)<cfg.automaticMinReferences,status='insufficient_observable_references';end
 info=struct('status',status,'source',source,'searchROI',searchROI,'candidateCount',size(cand,1),...
-    'selectedCount',size(rois,1),'selectedScores',selectedScores,'patchSize',p,'targetExcluded',true);
+    'selectedCount',size(rois,1),'selectedScores',selectedScores,'patchSize',p,'targetExcluded',true,...
+    'gridSize',[nx ny],'selectedGridCells',unique(gridId(chosen)).');
 end
 function yes=overlap(a,b)
 yes=a(1)<=b(1)+b(3)-1&&b(1)<=a(1)+a(3)-1&&a(2)<=b(2)+b(4)-1&&b(2)<=a(2)+a(4)-1;

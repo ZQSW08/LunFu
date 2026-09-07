@@ -12,7 +12,7 @@ if isfolder(output)
 end
 c=mfm.defaults();c.video=u.videoPath;c.output=output;c.rois=[target;refs];c.fps=u.captureFPS;c.axis=u.axis;c.maxFrames=u.maxFrames;c.targetMode=u.targetMode;c.referenceModel=model;c.maxSamples=samples;c.guideMode=guide;c.autoProfileRows=u.autoProfileRows;c.fastSearch=true;
 c.referenceTracker=u.referenceTracker;
-c.referenceSelection=u.referenceSelection;autoFields={'automaticReferenceCount','automaticPatchSize','automaticMinReferences','automaticMinInlierRatio','automaticConsensusTolerance','automaticMaxSpread','automaticAmbiguityRatio'};
+c.referenceSelection=u.referenceSelection;autoFields={'automaticReferenceCount','automaticPatchSize','automaticReferenceAffine','automaticMinReferences','automaticMinInlierRatio','automaticConsensusTolerance','automaticMaxSpread','automaticAmbiguityRatio'};
 for j=1:numel(autoFields),c.(autoFields{j})=u.(autoFields{j});end
 result=run_measurement(c);fid=fopen(fullfile(output,'.mfm_output'),'w');fprintf(fid,'MotionFusionMATLAB managed output\n');fclose(fid);
 result.roiProvenance=provenance;result.publicConfig=u;
@@ -25,5 +25,23 @@ end
 result.postprocessSeconds=toc(tt);save(fullfile(output,'result.mat'),'-struct','result','-v7');
 fid=fopen(fullfile(output,'roi_provenance.json'),'w');fwrite(fid,jsonencode(provenance,'PrettyPrint',true),'char');fclose(fid);
 export_real_outputs(result,im,u.showFigures,u.exportFigures);
+% Tracking-video rendering is an evidence export after measurement. Its time
+% is kept separate from algorithmSeconds so speed comparisons remain honest.
+result.trackingVideo=[];
+if u.exportTrackingVideo
+    trackingPath=fullfile(output,'tracking_overlay.avi');
+    try
+        result.trackingVideo=export_tracking_video(result,trackingPath);
+    catch ex
+        result.trackingVideo=struct('status','export_failed','path',trackingPath,...
+            'error',ex.message,'framesWritten',0,'seconds',NaN);
+        fid=fopen(fullfile(output,'tracking_video_error.txt'),'w');
+        if fid>=0,fwrite(fid,getReport(ex));fclose(fid);end
+    end
+else
+    result.trackingVideo=struct('status','disabled','path','','framesWritten',0,'seconds',0);
+end
+result.trackingVideoSeconds=result.trackingVideo.seconds;
+save(fullfile(output,'result.mat'),'-struct','result','-v7');
 fprintf('Measurement saved (not an accuracy certification): %s\n',output);
 end
