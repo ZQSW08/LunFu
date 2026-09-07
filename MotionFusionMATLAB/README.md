@@ -56,7 +56,7 @@ r=run_real_video(u);
 - `roi_provenance.json`、`01_first_frame_rois.png/.fig`：目标与参考坐标、来源；自动模式包含候选数及纹理分数。
 - `02_waveform_x/y`、`03_spectrum_x/y`：原始测量波形/频谱，同时输出 CSV、PNG、FIG。无效帧保持原时间轴和 NaN；频谱使用最长连续段并报告时长与频率分辨率。
 - `spectrum_x/y_normalized.csv` 和 `03_spectrum_x/y_normalized.png/.fig`：在保留原始频谱的基础上，将有限原始幅值除以该频谱的最大有限幅值，峰值为 1；若原始频谱全为零或无有限值则保留 NaN。归一化用于形状和峰值位置比较，不替代 px 振幅。
-- `tracking_overlay.avi`：逐帧叠加目标 ROI、参考 ROI、有效性和时间戳的追踪视频。它只用于检查跟踪效果，写入时间由 `result.trackingVideoSeconds` 单独记录，不计入 `result.algorithmSeconds`。
+- `tracking_overlay.avi`：直接在视频帧像素上叠加目标 ROI、参考 ROI 和有效性线型后写出的唯一追踪视频，不创建 MATLAB FIG 播放视频。它只用于检查跟踪效果，写入时间由 `result.trackingVideoSeconds` 单独记录，不计入 `result.algorithmSeconds`。
 - `04_optional_filter_x/y`：仅在填写 analysisBandHz 后生成的额外诊断；denoise=true 启用视频证据筛选的稳定模态分量。它不替代原始测量，滤波后干净不等于原始精度提高。
 
 所有 FIG 保存时 Visible='on'。showFigures=false 只在保存后关闭窗口。位移单位为 px；毫米振幅需要独立成像标定。参考和目标共享的真实刚体振动也会被扣除，因此测量量主要是相对于参考的局部运动。
