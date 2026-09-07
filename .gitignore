@@ -1,0 +1,46 @@
+# Generated outputs and experiment state
+**/outputs/
+**/results/
+**/data/
+**/experiments/
+**/tmp/
+**/review/
+**/review_upgrade/
+**/audit_*/
+**/versions/
+**/backups/
+
+# Large generated and measurement artifacts
+*.mat
+*.csv
+*.fig
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.gif
+*.avi
+*.mp4
+*.mfm_output
+*.log
+*.asv
+*.m~
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Optional external code kept outside this repository
+**/third_party/
+**/external/
+
+# Local credentials and secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.*
+secrets.*

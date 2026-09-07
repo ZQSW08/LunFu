@@ -1,0 +1,6 @@
+function save_pyramid_levels_single(frame, levels, outputDirectory, prefix)
+%SAVE_PYRAMID_LEVELS_SINGLE 将全部高斯层级合并成一张共享布局图。
+save_pyramid_preview(frame,levels, ...
+    fullfile(outputDirectory,sprintf('%s_pyramid_levels.png',prefix)), ...
+    '高斯金字塔层级');
+end

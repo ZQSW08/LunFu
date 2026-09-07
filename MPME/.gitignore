@@ -1,0 +1,18 @@
+# 运行输出与大型中间文件
+outputs/
+experiments/*/outputs/
+*.avi
+*.mp4
+*.fig
+
+# MATLAB 自动生成文件
+*.asv
+*.m~
+slprj/
+codegen/
+
+# 本地缓存与编辑器文件
+**/eco_cache/
+.vscode/
+*.mexw64
+*.mexa64

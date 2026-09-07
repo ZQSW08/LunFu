@@ -1,0 +1,46 @@
+function summary = run_adapter_smoke(outputRoot)
+%RUN_ADAPTER_SMOKE 用同一合成视频验证三个论文工程的 RMPTF 适配接口。
+if nargin<1 || isempty(outputRoot)
+    outputRoot=fullfile(fileparts(fileparts(mfilename('fullpath'))),'outputs','adapter_smoke');
+end
+if ~isfolder(outputRoot), mkdir(outputRoot); end
+managerRoot=fileparts(fileparts(fileparts(fileparts(mfilename('fullpath')))));
+videoPath=fullfile(managerRoot,'cross_method_experiments','synthetic_validation', ...
+    'large_motion_crossline_truth.avi');
+assert(isfile(videoPath),'请先运行 run_synthetic_validation 生成公共合成视频。');
+roi=[112 72 96 96]; maxFrames=36;
+
+addpath(fullfile(managerRoot,'MPME','src'));
+options=struct('trackerType','rmptf_crossline','mode','trend','largeMotionCutoffHz',1, ...
+    'trackingAxis','xy','maximumStepPixels',45,'captureFps',60, ...
+    'phaseCrosslineEnabled',true);
+[mpmeFrames,mpmeFps,mpmeRoi,mpmeTracking]=load_video_dynamic_roi( ...
+    videoPath,maxFrames,roi,options,'');
+assert(size(mpmeFrames,3)==maxFrames && size(mpmeRoi,1)==maxFrames);
+assert(isfield(mpmeTracking,'macroTrendDiagnostics') && isfield(mpmeTracking,'state'));
+
+addpath(fullfile(managerRoot,'BPAF','src'));
+[bpafTracking,bpafFrames]=bpaf.track_video_roi(videoPath,roi,maxFrames, ...
+    'tracker','rmptf_crossline','mode','band_protected','targetBandHz',[5 8], ...
+    'trackingAxis','xy','phaseCrosslineEnabled',true,'captureFps',60, ...
+    'searchRadiusPx',80,'maxStepPixels',45);
+assert(size(bpafFrames,3)==maxFrames && size(bpafTracking.crop_bbox_xywh,1)==maxFrames);
+
+addpath(fullfile(managerRoot,'AP-CV','src'));
+apcvOptions=struct('trackerType','rmptf_crossline','mode','integer_macro', ...
+    'largeMotionCutoffHz',1,'trackingAxis','xy','maximumStepPixels',45, ...
+    'phaseCrosslineEnabled',true,'maximumPoints',120,'minimumPoints',6);
+timeWindow=struct('captureFps',60,'startSeconds',0,'durationSeconds',Inf);
+[apcvFrames,videoInfo,apcvRoi,apcvTracking]=apcv_read_dynamic_roi_video_rmptf( ...
+    videoPath,roi,maxFrames,[],apcvOptions,timeWindow);
+assert(size(apcvFrames,3)==maxFrames && videoInfo.frameCount==maxFrames && size(apcvRoi,1)==maxFrames);
+
+summary=table([size(mpmeFrames,3);size(bpafFrames,3);size(apcvFrames,3)], ...
+    [mpmeFps;bpafTracking.processingFps;videoInfo.processingFps], ...
+    [mean(mpmeTracking.valid);mean(bpafTracking.valid);mean(apcvTracking.valid)], ...
+    'RowNames',{'MPME','BPAF','APCV'}, ...
+    'VariableNames',{'frame_count','processing_fps','valid_fraction'});
+writetable(summary,fullfile(outputRoot,'adapter_smoke.csv'),'WriteRowNames',true);
+save(fullfile(outputRoot,'adapter_smoke.mat'),'summary','mpmeTracking','bpafTracking','apcvTracking');
+disp(summary);
+end

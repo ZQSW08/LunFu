@@ -1,0 +1,13 @@
+{
+  "description": "论文没有公开原始视频时使用的合成等价验证配置",
+  "frames": 300,
+  "fps": 100.0,
+  "resolution": [128, 192],
+  "vibration_frequency_hz": 10.0,
+  "vibration_amplitude_px": 0.8,
+  "csp": {"pyramid_height": 2, "order": 3, "scale": 0},
+  "temporal_window_frames": 20,
+  "sparse_frequency_range_hz": [0.1, 50.0],
+  "sparse_frequency_step_hz": 0.01,
+  "lambda": 0.01
+}
