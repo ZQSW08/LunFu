@@ -91,13 +91,48 @@ for j=1:numel(keys)
     saveFigure(f,['03_spectrum_' key '_normalized']);
     if ~isempty(s.bandHz)
         f=figure('Visible','off','Color','w','Position',[100 100 1100 650]);
-        tiledlayout(2,1);nexttile;plot(r.time,s.raw,'Color',[.65 .65 .65]);hold on;
-        plot(r.time,s.broad,'--');plot(r.time,s.clean);grid on;xlabel('Time (s)');ylabel('px');
-        title(['OPTIONAL postprocessing: ' s.status],'Interpreter','none');
-        legend('Unfiltered','Broad band','Modal (if enabled)');
+        tiledlayout(3,1,'TileSpacing','compact');
+        nexttile;hRaw=plot(r.time,s.raw,'Color',[.65 .65 .65]);grid on;
+        xlabel('Time (s)');ylabel('Raw px');title('Unfiltered measurement');legend(hRaw,'Unfiltered');
+        nexttile;hold on;hasBroadTime=any(isfinite(s.broad));hasModal=any(isfinite(s.clean));
+        if hasBroadTime,hBroad=plot(r.time,s.broad,'--');end
+        if hasModal,hModal=plot(r.time,s.clean,'LineWidth',1);end
+        grid on;xlabel('Time (s)');ylabel('Processed px');
+        title(['Band-limited/modal diagnostic: ' strrep(s.status,'_',' ')],'Interpreter','none');
+        if hasBroadTime&&hasModal
+            legend([hBroad hModal],{'Broad band','Modal component'});
+        elseif hasBroadTime
+            legend(hBroad,'Broad band');
+            text(.5,.5,'No modal component: insufficient stable time-window evidence',...
+                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
+        elseif hasModal
+            legend(hModal,'Modal component');
+            text(.5,.5,'No finite broad-band signal available',...
+                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
+        else
+            text(.5,.5,'No finite processed signal available',...
+                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
+        end
         nexttile;a=mfm.spectrum(s.broad,r.fps);b=mfm.spectrum(s.clean,r.fps);
-        plot(a.frequency,a.amplitude,'--');hold on;plot(b.frequency,b.amplitude);
-        grid on;xlim([0 r.fps/2]);xlabel('Hz');ylabel('px');legend('Broad band','Modal');
+        hasBroadSpectrum=~isempty(a.frequency)&&any(isfinite(a.amplitude));
+        hasModalSpectrum=~isempty(b.frequency)&&any(isfinite(b.amplitude));
+        hold on;if hasBroadSpectrum,hA=plot(a.frequency,a.amplitude,'--');end
+        if hasModalSpectrum,hB=plot(b.frequency,b.amplitude,'LineWidth',1);end
+        grid on;xlim([0 r.fps/2]);xlabel('Hz');ylabel('Amplitude (px)');
+        if hasBroadSpectrum&&hasModalSpectrum
+            legend([hA hB],{'Broad band','Modal component'});
+        elseif hasBroadSpectrum
+            legend(hA,'Broad band');
+            text(.5,.5,'No modal spectrum available for this video length',...
+                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
+        elseif hasModalSpectrum
+            legend(hB,'Modal component');
+            text(.5,.5,'No broad-band spectrum available',...
+                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
+        else
+            text(.5,.5,'No finite spectrum available for this signal',...
+                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
+        end
         saveFigure(f,['04_optional_filter_' key]);
     end
 end
