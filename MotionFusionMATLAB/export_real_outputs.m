@@ -116,9 +116,39 @@ for j=1:numel(keys)
         nexttile;a=mfm.spectrum(s.broad,r.fps);b=mfm.spectrum(s.clean,r.fps);
         hasBroadSpectrum=~isempty(a.frequency)&&any(isfinite(a.amplitude));
         hasModalSpectrum=~isempty(b.frequency)&&any(isfinite(b.amplitude));
-        hold on;if hasBroadSpectrum,hA=plot(a.frequency,a.amplitude,'--');end
-        if hasModalSpectrum,hB=plot(b.frequency,b.amplitude,'LineWidth',1);end
-        grid on;xlim([0 r.fps/2]);xlabel('Hz');ylabel('Amplitude (px)');
+        % Normalize the processed spectra with one shared reference.  Using
+        % one reference keeps broad/modal relative amplitude comparable;
+        % normalizing each curve independently would hide that difference.
+        processedAmplitudes=[];
+        if hasBroadSpectrum,processedAmplitudes=[processedAmplitudes; a.amplitude(isfinite(a.amplitude))];end
+        if hasModalSpectrum,processedAmplitudes=[processedAmplitudes; b.amplitude(isfinite(b.amplitude))];end
+        processedNorm=max(processedAmplitudes,[],'omitnan');
+        hasProcessedReference=~isempty(processedNorm)&&isscalar(processedNorm)&&...
+            isfinite(processedNorm)&&processedNorm>0;
+        aNormalized=nan(size(a.amplitude));bNormalized=nan(size(b.amplitude));
+        if hasProcessedReference
+            if hasBroadSpectrum,aNormalized=a.amplitude/processedNorm;end
+            if hasModalSpectrum,bNormalized=b.amplitude/processedNorm;end
+        end
+        if hasBroadSpectrum
+            writetable(table(a.frequency,aNormalized,'VariableNames',...
+                {'frequency_Hz','normalized_broad_amplitude'}),...
+                fullfile(out,['spectrum_' key '_broad_normalized.csv']));
+        end
+        if hasModalSpectrum
+            writetable(table(b.frequency,bNormalized,'VariableNames',...
+                {'frequency_Hz','normalized_modal_amplitude'}),...
+                fullfile(out,['spectrum_' key '_modal_normalized.csv']));
+        end
+        hold on;if hasBroadSpectrum,hA=plot(a.frequency,aNormalized,'--');end
+        if hasModalSpectrum,hB=plot(b.frequency,bNormalized,'LineWidth',1);end
+        grid on;xlim([0 r.fps/2]);ylim([0 1.05]);xlabel('Hz');
+        ylabel('Normalized amplitude (a/A_{max,processed})');
+        if hasProcessedReference
+            title(sprintf('Normalized processed spectrum; shared reference %.5g px',processedNorm));
+        else
+            title('Normalized processed spectrum; no finite reference');
+        end
         if hasBroadSpectrum&&hasModalSpectrum
             legend([hA hB],{'Broad band','Modal component'});
         elseif hasBroadSpectrum
