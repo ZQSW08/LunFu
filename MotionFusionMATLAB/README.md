@@ -16,6 +16,8 @@ Run one of these files after commenting/uncommenting the desired entries:
 
 The 0723 runner adds acceleration figures in a separate `batch_acceleration` subfolder; the core method outputs are unchanged.
 
+The six user entry scripts are explained in [`scripts/USER_ENTRY_SCRIPTS_GUIDE.md`](scripts/USER_ENTRY_SCRIPTS_GUIDE.md).
+
 ## Traceability
 
 Before modifying maintained source, run `backup_core.ps1 -Label <label>`. The resulting snapshot is stored in `backups/`. Git commits are used for source history; videos, generated outputs, and backups are not published.
