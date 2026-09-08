@@ -16,6 +16,7 @@ c.referenceSelection=u.referenceSelection;autoFields={'automaticReferenceCount',
 for j=1:numel(autoFields),c.(autoFields{j})=u.(autoFields{j});end
 result=run_measurement(c);fid=fopen(fullfile(output,'.mfm_output'),'w');fprintf(fid,'MotionFusionMATLAB managed output\n');fclose(fid);
 result.roiProvenance=provenance;result.publicConfig=u;
+result.sourceProvenance=mfm.source_provenance();
 ids=1;if strcmp(u.axis,'y'),ids=2;elseif strcmp(u.axis,'xy'),ids=1:2;end
 tt=tic;
 for axisId=ids
@@ -34,6 +35,8 @@ for axisId=ids
 end
 result.postprocessSeconds=toc(tt);save(fullfile(output,'result.mat'),'-struct','result','-v7');
 fid=fopen(fullfile(output,'roi_provenance.json'),'w');fwrite(fid,jsonencode(provenance,'PrettyPrint',true),'char');fclose(fid);
+fid=fopen(fullfile(output,'source_provenance.json'),'w');
+if fid>=0,fwrite(fid,jsonencode(result.sourceProvenance,'PrettyPrint',true),'char');fclose(fid);end
 export_real_outputs(result,im,u.showFigures,u.exportFigures);
 % Tracking-video rendering is an evidence export after measurement. Its time
 % is kept separate from algorithmSeconds so speed comparisons remain honest.

@@ -6,13 +6,17 @@ if isempty(band)
     if enabled,status='denoise_disabled_no_analysis_band';end
     out=struct('raw',x,'broad',x,'clean',x,'modesHz',[],'bandsHz',[],...
         'status',status,'retainedPowerFraction',NaN,'removedRMS',0,'bandHz',[],...
-        'denoiseRequestedWithoutBand',logical(enabled));
+        'denoiseRequestedWithoutBand',logical(enabled),'evidenceWindows',0,...
+        'modalIdentified',false,'cleanKind','unfiltered_passthrough',...
+        'fallbackReason','analysis_band_empty');
     return;
 end
 band(2)=min(band(2),.45*fs);assert(band(1)>0&&band(2)>band(1),'Invalid analysis band');
 raw=mfm.band_segments(x,fs,band);clean=raw;
 out=struct('raw',x,'broad',raw,'clean',clean,'modesHz',[],'bandsHz',[],...
-    'status','disabled','retainedPowerFraction',NaN,'removedRMS',0,'bandHz',band);
+    'status','disabled','retainedPowerFraction',NaN,'removedRMS',0,'bandHz',band,...
+    'evidenceWindows',0,'modalIdentified',false,'cleanKind','broad_band_only',...
+    'fallbackReason','denoise_disabled');
 if ~enabled,return;end
 % Two-second blocks. Estimate frequency from observations, not filename or truth.
 L=round(2*fs);hop=floor(L/2);powers=[];blocks=[];starts=[];nfft=4*2^nextpow2(L);f=(0:nfft/2)'*fs/nfft;
@@ -26,12 +30,16 @@ for start=1:hop:numel(x)-L+1
     noise=median(p(f>=band(1)&f<=band(2)));powers(:,end+1)=p/max(noise,eps);blocks(:,end+1)=weighted;starts(end+1)=start; %#ok<AGROW>
 end
 out.evidenceWindows=size(powers,2);out.missingSpectralSamples='zero weight at original timestamps; no waveform interpolation';
-if size(powers,2)<4,out.status='insufficient_time_window_evidence';return;end
+if size(powers,2)<4
+    out.status='insufficient_time_window_evidence';out.fallbackReason='fewer_than_four_valid_windows';return;
+end
 aggregate=median(powers,2);[peaks,ids]=findpeaks(aggregate,'MinPeakDistance',max(1,round(1/(fs/nfft)))) ;
 good=peaks>=12 & mean(powers(ids,:)>=8,2)>=.6;ids=ids(good);peaks=peaks(good);
-if isempty(ids),out.status='no_stable_modes';return;end
+if isempty(ids),out.status='no_stable_modes';out.fallbackReason='no_repeated_power_peaks';return;end
 keep=peaks>=.03*max(peaks);ids=ids(keep);peaks=peaks(keep);
-if numel(ids)>4,out.status='broadband_or_many_modes_no_narrowing';return;end
+if numel(ids)>4
+    out.status='broadband_or_many_modes_no_narrowing';out.fallbackReason='more_than_four_candidate_modes';return;
+end
 % A broad transient can pass a power-only test. Require phase consistency
 % across time blocks for the specifically periodic/modal output.
 centers=f(ids);coherence=zeros(size(centers));
@@ -42,7 +50,10 @@ for j=1:numel(centers)
     consistency=abs(mean(coefficients./max(abs(coefficients),eps),2));[coherence(j),ix]=max(consistency);centers(j)=scan(ix);
 end
 out.candidateHz=centers;out.phaseCoherence=coherence;centers=centers(coherence>=.75);
-if isempty(centers),out.status='no_phase_coherent_modes_broad_preserved';return;end
+if isempty(centers)
+    out.status='no_phase_coherent_modes_broad_preserved';
+    out.fallbackReason='candidate_peaks_failed_phase_coherence';return;
+end
 width=max(1.25,2*fs/L);bands=[max(band(1),centers-width) min(band(2),centers+width)];bands=sortrows(bands);
 merged=bands(1,:);for k=2:size(bands,1),if bands(k,1)<=merged(end,2),merged(end,2)=max(merged(end,2),bands(k,2));else,merged(end+1,:)=bands(k,:);end;end
 clean=nan(size(x));e=diff([false;isfinite(raw);false]);a=find(e==1);b=find(e==-1)-1;
@@ -55,5 +66,6 @@ for k=1:numel(a)
     clean(ix)=y;
 end
 out.clean=clean;out.modesHz=centers;out.bandsHz=merged;out.status='video_identified_modal_component';
+out.modalIdentified=true;out.cleanKind='modal_narrowband';out.fallbackReason='';
 ok=isfinite(clean)&isfinite(raw);out.retainedPowerFraction=sum(clean(ok).^2)/max(eps,sum(raw(ok).^2));out.removedRMS=sqrt(mean((raw(ok)-clean(ok)).^2));
 end

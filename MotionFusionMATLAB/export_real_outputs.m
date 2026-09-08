@@ -94,7 +94,12 @@ for j=1:numel(keys)
         tiledlayout(3,1,'TileSpacing','compact');
         nexttile;hRaw=plot(r.time,s.raw,'Color',[.65 .65 .65]);grid on;
         xlabel('Time (s)');ylabel('Raw px');title('Unfiltered measurement');legend(hRaw,'Unfiltered');
-        nexttile;hold on;hasBroadTime=any(isfinite(s.broad));hasModal=any(isfinite(s.clean));
+        nexttile;hold on;hasBroadTime=any(isfinite(s.broad));
+        modalIdentified=isfield(s,'modalIdentified')&&logical(s.modalIdentified);
+        if ~modalIdentified&&isfield(s,'status')
+            modalIdentified=strcmp(s.status,'video_identified_modal_component');
+        end
+        hasModal=modalIdentified&&any(isfinite(s.clean));
         if hasBroadTime,hBroad=plot(r.time,s.broad,'--');end
         if hasModal,hModal=plot(r.time,s.clean,'LineWidth',1);end
         grid on;xlabel('Time (s)');ylabel('Processed px');
@@ -103,7 +108,8 @@ for j=1:numel(keys)
             legend([hBroad hModal],{'Broad band','Modal component'});
         elseif hasBroadTime
             legend(hBroad,'Broad band');
-            text(.5,.5,'No modal component: insufficient stable time-window evidence',...
+            fallbackStatus='unknown';if isfield(s,'status'),fallbackStatus=strrep(s.status,'_',' ');end
+            text(.5,.5,['No modal component; clean is broad-band fallback (' fallbackStatus ')'],...
                 'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
         elseif hasModal
             legend(hModal,'Modal component');
@@ -115,7 +121,7 @@ for j=1:numel(keys)
         end
         nexttile;a=mfm.spectrum(s.broad,r.fps);b=mfm.spectrum(s.clean,r.fps);
         hasBroadSpectrum=~isempty(a.frequency)&&any(isfinite(a.amplitude));
-        hasModalSpectrum=~isempty(b.frequency)&&any(isfinite(b.amplitude));
+        hasModalSpectrum=modalIdentified&&~isempty(b.frequency)&&any(isfinite(b.amplitude));
         % Normalize the processed spectra with one shared reference.  Using
         % one reference keeps broad/modal relative amplitude comparable;
         % normalizing each curve independently would hide that difference.
@@ -153,7 +159,7 @@ for j=1:numel(keys)
             legend([hA hB],{'Broad band','Modal component'});
         elseif hasBroadSpectrum
             legend(hA,'Broad band');
-            text(.5,.5,'No modal spectrum available for this video length',...
+            text(.5,.5,'No modal spectrum: clean is broad-band fallback or evidence was rejected',...
                 'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
         elseif hasModalSpectrum
             legend(hB,'Modal component');
