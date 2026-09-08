@@ -117,4 +117,3 @@ function [a,f]=one_sided_spectrum(x,fs)
 z=x(:); z(~isfinite(z))=0; z=z-mean(z); n=numel(z); nfft=2^nextpow2(max(n,2)); w=hann(n);
 y=fft(z.*w,nfft); a=abs(y(1:nfft/2+1))/max(sum(w),eps)*2; a(1)=a(1)/2; f=(0:nfft/2)'*fs/nfft;
 end
-
