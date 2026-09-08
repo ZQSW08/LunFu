@@ -7,71 +7,70 @@ projectRoot=fileparts(fileparts(scriptRoot));
 addpath(fullfile(projectRoot,'src'));
 
 %% 1. 输入视频与批处理输出
-videoFiles={ ...
-    'D:\实验室\风洞项目\0723单目\1-0-1.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-0-2.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-0-3.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-30-1-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-30-1-t.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-30-2-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-32-1-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-32-1-t.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-32-1-w.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-32-2-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-33-1-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-33-1-t.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-33-1-w.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-33-2-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-33-2-t.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-33-2-w.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-33-3-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-33-3-t.mp4', ...
-    'D:\实验室\风洞项目\0723单目\1-33-3-w.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-0-1.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-0-2.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-0-3.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-0-4.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-1-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-1-t.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-1-w.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-2-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-2-t.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-2-w.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-3-q.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-3-t.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-3-w.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\jiujiasudujiweizhi.mp4', ...
-    'D:\实验室\风洞项目\0723单目\xinjiasuduji\shoujidoudong.mp4' ...
+videoFiles={
+    'D:\实验室\风洞项目\0723单目\1-0-1.mp4';
+    'D:\实验室\风洞项目\0723单目\1-0-2.mp4';
+    'D:\实验室\风洞项目\0723单目\1-0-3.mp4';
+    'D:\实验室\风洞项目\0723单目\1-30-1-q.mp4';
+    'D:\实验室\风洞项目\0723单目\1-30-1-t.mp4';
+    'D:\实验室\风洞项目\0723单目\1-30-2-q.mp4';
+    'D:\实验室\风洞项目\0723单目\1-32-1-q.mp4';
+    'D:\实验室\风洞项目\0723单目\1-32-1-t.mp4';
+    'D:\实验室\风洞项目\0723单目\1-32-1-w.mp4';
+    'D:\实验室\风洞项目\0723单目\1-32-2-q.mp4';
+    'D:\实验室\风洞项目\0723单目\1-33-1-q.mp4';
+    'D:\实验室\风洞项目\0723单目\1-33-1-t.mp4';
+    'D:\实验室\风洞项目\0723单目\1-33-1-w.mp4';
+    'D:\实验室\风洞项目\0723单目\1-33-2-q.mp4';
+    'D:\实验室\风洞项目\0723单目\1-33-2-t.mp4';
+    'D:\实验室\风洞项目\0723单目\1-33-2-w.mp4';
+    'D:\实验室\风洞项目\0723单目\1-33-3-q.mp4';
+    'D:\实验室\风洞项目\0723单目\1-33-3-t.mp4';
+    'D:\实验室\风洞项目\0723单目\1-33-3-w.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-0-1.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-0-2.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-0-3.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-0-4.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-1-q.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-1-t.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-1-w.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-2-q.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-2-t.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-2-w.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-3-q.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-3-t.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\2-33-3-w.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\jiujiasudujiweizhi.mp4';
+    'D:\实验室\风洞项目\0723单目\xinjiasuduji\shoujidoudong.mp4';
 };
 outputRoot=fullfile(projectRoot,'outputs','batch_0723_windtunnel');
 
 %% 2. 第一帧目标 ROI（与参考 ROI 配置相互独立）
-% 每个视频运行时交互框选；也可以改成manual并填写targetROI。
-roiMode='interactive';                 % interactive框选 / manual手填 / saved读取
-targetROI=[];                           % manual时：[x y width height]
-roiSource='';                           % saved时：ROI文件路径
+roiMode= 'interactive';                 % interactive 框选 / manual 手填 / saved 读取
+targetROI= [];                           % manual时：[x y width height]
+roiSource= '';                           % saved时：ROI文件路径
 
 %% 3. 宏观运动参考
-referenceModel='translation';           % translation一个参考 / similarity至少两个参考 / none无参考
-referenceSelection='interactive';      % interactive框选参考 / manual使用referenceROIs
-referenceROIs=[];                       % manual时每行一个[x y width height]
-% none只输出目标总位移；translation用于目标与一个刚性参考的相对位移。
+referenceModel= 'none';           % translation 一个参考 / similarity 至少两个参考 / none 无参考
+referenceSelection= 'interactive';      % interactive 框选参考 / manual 使用 referenceROIs
+referenceROIs= [];                       % manual 时每行一个[x y width height]
+% none只输出目标总位移；translation需要框选一个随宏观运动的刚性参考。
 
 %% 4. 图像配准（所有视频使用同一配置）
-targetMode='direct';                    % direct一致目标配准 / profile旧方法 / consensus实验 / texture双向
-referenceTracker='flow';                % flow双向光流参考 / anchor旧固定模板
-axis='x';                               % 按物理方向选择x或y
-captureFPS=[];                          % []使用视频元数据；明确填写时使用指定采样率
-maxFrames=Inf;                          % Inf处理完整视频；可填整数做快速检查
-maxSamples=6500;                        % 固定通用设置，不随视频名称变化
-autoProfileRows=true;                   % 仅用第一帧确定目标测量支持
+targetMode= 'direct';                    % direct 一致目标配准 / profile 旧方法 / consensus 实验 / texture 双向
+referenceTracker= 'flow';                % flow 双向光流参考 / anchor 旧固定模板
+axis= 'y';                               % 按物理方向选择 x 或 y
+captureFPS= 200;                          % []使用视频元数据；明确填写时使用指定采样率
+maxFrames= Inf;                          % Inf处理完整视频；可填整数做快速检查
+maxSamples= 6500;                        % 固定通用设置，不随视频名称变化
+autoProfileRows= true;                   % 仅用第一帧确定目标测量支持
 
 %% 5. 输出（主结果保持原始测量）
-analysisBandHz=[];                     % []不带通；明确设置频带才生成额外诊断图
-denoise=false;                          % 保持false；启用时必须先填写analysisBandHz
-showFigures=true;                       % 保存的FIG保持visible=on
-exportFigures=true;
-exportTrackingVideo=false;              % 独立追踪视频，不计入算法耗时
+analysisBandHz= [];                     % [] 不带通；明确设置频带才生成额外诊断图
+denoise= false;                          % 保持 false ；启用时必须先填写 analysisBandHz
+showFigures=false;                       % 保存的FIG保持 visible=on
+exportFigures= true;
+exportTrackingVideo= false;              % 独立追踪视频，不计入算法耗时
 
 %% 6. 批处理执行
 for k=1:numel(videoFiles)
@@ -103,17 +102,19 @@ if nnz(valid)<4, warning('有效样本不足，无法计算加速度：%s',name)
 t=(0:numel(x)-1)'/fs; x=fillmissing(x,'linear','EndValues','nearest');
 velocity=gradient(x,1/fs); acceleration=gradient(velocity,1/fs); acceleration(~valid)=NaN;
 folder=fullfile(outDir,'batch_acceleration'); if ~isfolder(folder), mkdir(folder); end
-fig=figure('Visible','on','Color','w');
+fig=figure('Visible','off','Color','w');
 plot(t,acceleration,'LineWidth',1); grid on; xlabel('Time (s)'); ylabel('Acceleration (px/s^2)');
 title([name ' acceleration'],'Interpreter','none');
-savefig(fig,fullfile(folder,'acceleration_time.fig')); exportgraphics(fig,fullfile(folder,'acceleration_time.png')); close(fig);
+set(fig,'Visible','on'); savefig(fig,fullfile(folder,'acceleration_time.fig')); exportgraphics(fig,fullfile(folder,'acceleration_time.png')); close(fig);
 [a,f]=one_sided_spectrum(acceleration,fs); ref=max(a); if ref>0, an=a/ref; else, an=zeros(size(a)); end
-fig=figure('Visible','on','Color','w'); plot(f,an,'LineWidth',1); grid on;
+fig=figure('Visible','off','Color','w'); plot(f,an,'LineWidth',1); grid on;
 xlabel('Frequency (Hz)'); ylabel('Normalized amplitude'); title([name ' normalized acceleration spectrum'],'Interpreter','none'); xlim([0 fs/2]);
-savefig(fig,fullfile(folder,'acceleration_spectrum_normalized.fig')); exportgraphics(fig,fullfile(folder,'acceleration_spectrum_normalized.png')); close(fig);
+set(fig,'Visible','on'); savefig(fig,fullfile(folder,'acceleration_spectrum_normalized.fig')); exportgraphics(fig,fullfile(folder,'acceleration_spectrum_normalized.png')); close(fig);
 save(fullfile(folder,'acceleration.mat'),'t','x','velocity','acceleration','f','a','an','fs','valid','-v7');
 end
 function [a,f]=one_sided_spectrum(x,fs)
 z=x(:); z(~isfinite(z))=0; z=z-mean(z); n=numel(z); nfft=2^nextpow2(max(n,2)); w=hann(n);
 y=fft(z.*w,nfft); a=abs(y(1:nfft/2+1))/max(sum(w),eps)*2; a(1)=a(1)/2; f=(0:nfft/2)'*fs/nfft;
 end
+
+
