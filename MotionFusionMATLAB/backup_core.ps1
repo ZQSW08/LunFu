@@ -6,7 +6,14 @@ $stamp = Get-Date -Format 'yyyyMMdd_HHmmss_fff'
 $snapshotRoot = Join-Path $sourceRoot ('backups/' + $stamp + '_' + $safeLabel)
 New-Item -ItemType Directory -Path $snapshotRoot | Out-Null
 $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -File | Where-Object { $_.Extension -in '.m','.py','.ps1','.md' })
-$sourceFiles += @(Get-ChildItem -LiteralPath (Join-Path $sourceRoot '+mfm') -File -Recurse)
+# Maintained implementation and user-facing runners now live below src/ and scripts/.
+# Development outputs, archived reports, and generated results are intentionally excluded.
+foreach ($tree in @('src','scripts')) {
+    $treePath = Join-Path $sourceRoot $tree
+    if (Test-Path -LiteralPath $treePath) {
+        $sourceFiles += @(Get-ChildItem -LiteralPath $treePath -File -Recurse)
+    }
+}
 $manifest = foreach ($sourceFile in $sourceFiles) {
     $relative = $sourceFile.FullName.Substring($sourceRoot.Length + 1)
     $destination = Join-Path $snapshotRoot $relative
