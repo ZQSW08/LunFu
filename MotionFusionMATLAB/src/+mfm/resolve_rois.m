@@ -1,6 +1,6 @@
 function [target,refs,provenance,model,samples,guideMode]=resolve_rois(u,im)
 % Geometry only. No video-name-specific tracker/model/sample configuration.
-root=fileparts(fileparts(mfilename('fullpath')));workspace=fileparts(root);
+srcRoot=fileparts(fileparts(mfilename('fullpath')));projectRoot=fileparts(srcRoot);workspace=fileparts(projectRoot);
 [~,name]=fileparts(u.videoPath);target=u.targetROI;refs=u.referenceROIs;
 provenance=struct('targetSource','explicit targetROI','referenceSource','explicit referenceROIs','video',u.videoPath);
 model=u.referenceModel;samples=u.maxSamples;guideMode='geometry';
