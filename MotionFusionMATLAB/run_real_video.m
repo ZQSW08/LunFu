@@ -57,4 +57,17 @@ end
 result.trackingVideoSeconds=result.trackingVideo.seconds;
 save(fullfile(output,'result.mat'),'-struct','result','-v7');
 fprintf('Measurement saved (not an accuracy certification): %s\n',output);
+for axisId=ids
+    key='x';if axisId==2,key='y';end
+    s=result.signals.(key);modal=false;
+    if isfield(s,'modalIdentified'),modal=logical(s.modalIdentified);end
+    kind='unknown';if isfield(s,'cleanKind'),kind=s.cleanKind;end
+    status='unknown';if isfield(s,'status'),status=s.status;end
+    windows=0;if isfield(s,'evidenceWindows'),windows=s.evidenceWindows;end
+    reason='';if isfield(s,'fallbackReason'),reason=s.fallbackReason;end
+    fprintf('Postprocess %s: status=%s; modalIdentified=%d; cleanKind=%s; evidenceWindows=%d',...
+        key,status,modal,kind,windows);
+    if ~modal&&!isempty(reason),fprintf('; reason=%s',reason);end
+    fprintf('.\n');
+end
 end

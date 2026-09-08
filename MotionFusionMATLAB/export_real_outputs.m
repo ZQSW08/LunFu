@@ -103,21 +103,13 @@ for j=1:numel(keys)
         if hasBroadTime,hBroad=plot(r.time,s.broad,'--');end
         if hasModal,hModal=plot(r.time,s.clean,'LineWidth',1);end
         grid on;xlabel('Time (s)');ylabel('Processed px');
-        title(['Band-limited/modal diagnostic: ' strrep(s.status,'_',' ')],'Interpreter','none');
+        title('Band-limited/modal diagnostic');
         if hasBroadTime&&hasModal
             legend([hBroad hModal],{'Broad band','Modal component'});
         elseif hasBroadTime
             legend(hBroad,'Broad band');
-            fallbackStatus='unknown';if isfield(s,'status'),fallbackStatus=strrep(s.status,'_',' ');end
-            text(.5,.5,['No modal component; clean is broad-band fallback (' fallbackStatus ')'],...
-                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
         elseif hasModal
             legend(hModal,'Modal component');
-            text(.5,.5,'No finite broad-band signal available',...
-                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
-        else
-            text(.5,.5,'No finite processed signal available',...
-                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
         end
         nexttile;a=mfm.spectrum(s.broad,r.fps);b=mfm.spectrum(s.clean,r.fps);
         hasBroadSpectrum=~isempty(a.frequency)&&any(isfinite(a.amplitude));
@@ -150,24 +142,13 @@ for j=1:numel(keys)
         if hasModalSpectrum,hB=plot(b.frequency,bNormalized,'LineWidth',1);end
         grid on;xlim([0 r.fps/2]);ylim([0 1.05]);xlabel('Hz');
         ylabel('Normalized amplitude (a/A_{max,processed})');
-        if hasProcessedReference
-            title(sprintf('Normalized processed spectrum; shared reference %.5g px',processedNorm));
-        else
-            title('Normalized processed spectrum; no finite reference');
-        end
+        title('Normalized processed spectrum');
         if hasBroadSpectrum&&hasModalSpectrum
             legend([hA hB],{'Broad band','Modal component'});
         elseif hasBroadSpectrum
             legend(hA,'Broad band');
-            text(.5,.5,'No modal spectrum: clean is broad-band fallback or evidence was rejected',...
-                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
         elseif hasModalSpectrum
             legend(hB,'Modal component');
-            text(.5,.5,'No broad-band spectrum available',...
-                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
-        else
-            text(.5,.5,'No finite spectrum available for this signal',...
-                'Units','normalized','HorizontalAlignment','center','Color',[.75 .1 .05]);
         end
         saveFigure(f,['04_optional_filter_' key]);
     end
