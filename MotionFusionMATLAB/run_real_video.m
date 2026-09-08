@@ -67,7 +67,9 @@ for axisId=ids
     reason='';if isfield(s,'fallbackReason'),reason=s.fallbackReason;end
     fprintf('Postprocess %s: status=%s; modalIdentified=%d; cleanKind=%s; evidenceWindows=%d',...
         key,status,modal,kind,windows);
-    if ~modal&&!isempty(reason),fprintf('; reason=%s',reason);end
+    if ~modal && ~isempty(reason)
+        fprintf('; reason=%s',reason);
+    end
     fprintf('.\n');
 end
 end
