@@ -65,6 +65,22 @@ r=run_real_video(u);
 
 ## 回溯与验证
 
+### 显式慢运动分离（2026-09-08）
+
+`run_user_video_motion.m` 是新的无参考示例：`motionCutoffHz=3; motionOrder=4`。
+3 Hz 是慢运动与振动有频率间隔时的实验假设，不是通用默认。
+公共默认 `motionCutoffHz=[]` 保持关闭；开启后新增 `05_motion_separation_x/y`、
+`motion_separation_x/y.csv`、`motion_transfer_x/y.csv` 和候选幅值/归一化频谱。
+`03_spectrum` 仍是原始测量；none 时保留大运动是其定义，候选请看 `05`。
+候选图单独显示振动坐标、排除每个连续段边界；分解计入 `postprocessSeconds`。
+同频大运动与振动不能通过这个平滑先验分离。
+
+`guided_profile` 是本轮失败的定位引导实验：已有视频上更慢且覆盖下降，不推荐替代 profile。
+`local_affine + flow` 是显式局部仿射外推参考，仍可能漂移，不保证完整消除大运动。
+
+可执行 `test_motion_separation` 检查分解与缺测合同；
+`run_user_residual_review(tag,Inf)` 是依赖本地保存ROI的开发重放，不是通用数据入口。
+
 ```matlab
 test_audit_contracts;
 test_upgrade;

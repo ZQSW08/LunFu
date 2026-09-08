@@ -4,7 +4,8 @@ root=fileparts(fileparts(mfilename('fullpath')));workspace=fileparts(root);
 [~,name]=fileparts(u.videoPath);target=u.targetROI;refs=u.referenceROIs;
 provenance=struct('targetSource','explicit targetROI','referenceSource','explicit referenceROIs','video',u.videoPath);
 model=u.referenceModel;samples=u.maxSamples;guideMode='geometry';
-assert(any(strcmp(model,{'none','auto','translation','similarity'})),'Unknown referenceModel');
+assert(any(strcmp(model,{'none','auto','translation','similarity','local_affine'})),'Unknown referenceModel');
+if strcmp(model,'local_affine'),assert(strcmp(u.referenceTracker,'flow'),'local_affine requires referenceTracker=flow');end
 assert(any(strcmp(u.referenceSelection,{'manual','interactive','automatic'})),'Unknown referenceSelection');
 if strcmp(u.roiMode,'saved')
     source=u.roiSource;

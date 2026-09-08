@@ -5,13 +5,13 @@ base=mfm.defaults();names=fieldnames(cfg);for j=1:numel(names),base.(names{j})=c
 assert(size(cfg.rois,1)>=1,'At least one target ROI is required');
 assert(strcmp(cfg.referenceModel,'none')||size(cfg.rois,1)>=2,'Reference-relative measurement requires explicit reference ROIs');
 assert(~strcmp(cfg.referenceModel,'none')||size(cfg.rois,1)==1,'none requires target ROI only');
-assert(any(strcmp(cfg.targetMode,{'profile','consensus','direct','texture'})),'Unknown targetMode');
+assert(any(strcmp(cfg.targetMode,{'profile','guided_profile','consensus','direct','texture'})),'Unknown targetMode');
 assert(any(strcmp(cfg.referenceTracker,{'anchor','tiles','flow'})),'Unknown referenceTracker');
 assert(any(strcmp(cfg.referenceSelection,{'manual','interactive','automatic'})),'Unknown referenceSelection');
 automaticReference=strcmp(cfg.referenceSelection,'automatic');
 if automaticReference,assert(strcmp(cfg.referenceModel,'translation')&&size(cfg.rois,1)-1>=cfg.automaticMinReferences,'Automatic references require robust translation and enough selected patches');end
 assert(any(strcmp(cfg.axis,{'x','y','xy'})),'axis must be x/y/xy');
-isProfile=any(strcmp(cfg.targetMode,{'profile','consensus','direct'}));
+isProfile=any(strcmp(cfg.targetMode,{'profile','guided_profile','consensus','direct'}));
 assert(~(strcmp(cfg.axis,'xy')&&isProfile),'Use texture for independent xy measurement');
 originalCfg=cfg;transposeInput=strcmp(cfg.axis,'y');
 if transposeInput,cfg.rois=cfg.rois(:,[2 1 4 3]);end
@@ -34,7 +34,8 @@ while hasFrame(v)&&k<cfg.maxFrames
             elseif strcmp(cfg.referenceTracker,'flow'),trackers{j}=mfm.FlowReference(im,cfg.rois(j,:),refCfg);
             else,trackers{j}=mfm.Tracker(im,cfg.rois(j,:),refCfg);end
         end
-        if strcmp(cfg.targetMode,'consensus'),trackers{1}=mfm.ConsensusProfile(im,cfg.rois(1,:),cfg);
+        if strcmp(cfg.targetMode,'guided_profile'),trackers{1}=mfm.GuidedProfile(im,cfg.rois(1,:),cfg);
+        elseif strcmp(cfg.targetMode,'consensus'),trackers{1}=mfm.ConsensusProfile(im,cfg.rois(1,:),cfg);
         elseif strcmp(cfg.targetMode,'direct'),trackers{1}=mfm.DirectProfile(im,cfg.rois(1,:),cfg);
         elseif isProfile,trackers{1}=mfm.Profile(im,cfg.rois(1,:),cfg);
         else,trackers{1}=mfm.Tracker(im,cfg.rois(1,:),cfg);end

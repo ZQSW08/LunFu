@@ -19,6 +19,28 @@ for j=1:numel(keys)
     key=keys{j};s=r.signals.(key);raw=mfm.spectrum(s.raw,r.fps);
     id=1;if strcmp(key,'y'),id=2;end
     total=r.displacements(:,1,id);ref=r.macro(:,id);
+    if isfield(r,'motionSeparation')&&isfield(r.motionSeparation,key)
+        ms=r.motionSeparation.(key);
+        interior=ms.vibration;interior(~ms.interior)=NaN;
+        sp=mfm.spectrum(interior,r.fps);
+        writetable(table(sp.frequency,sp.amplitude,'VariableNames',{'frequency_Hz','candidate_amplitude_px'}),...
+            fullfile(out,['motion_candidate_spectrum_' key '.csv']));
+        normalizedCandidate=nan(size(sp.amplitude));
+        peak=max(sp.amplitude,[],'omitnan');
+        if ~isempty(peak)&&isfinite(peak)&&peak>0,normalizedCandidate=sp.amplitude/peak;end
+        writetable(table(sp.frequency,normalizedCandidate,'VariableNames',{'frequency_Hz','normalized_candidate_amplitude'}),...
+            fullfile(out,['motion_candidate_spectrum_' key '_normalized.csv']));
+        if makeFigures
+            f=figure('Visible','off','Color','w','Position',[100 100 1100 900]);tiledlayout(4,1);
+            nexttile;plot(r.time,total,r.time,ref);legend('Target total','Reference');ylabel('px');grid on;
+            nexttile;plot(r.time,s.raw,r.time,ms.trend);
+            legend('Raw relative/total','Smooth trend');ylabel('px');grid on;
+            nexttile;plot(r.time,interior);ylabel('Candidate px');xlabel('Time (s)');grid on;
+            title(sprintf('Model-dependent candidate; cutoff %g Hz; edge samples excluded',ms.cutoffHz));
+            nexttile;plot(sp.frequency,sp.amplitude);xlabel('Hz');ylabel('Candidate px');grid on;
+            saveFigure(f,['05_motion_separation_' key]);
+        end
+    end
     dat=table(r.time,total,ref,s.raw,s.broad,s.clean,isfinite(total),isfinite(s.raw),...
         'VariableNames',{'time_s','total_target_px','reference_motion_px','raw_relative_px',...
         'optional_broad_px','optional_modal_px','target_valid','relative_valid'});

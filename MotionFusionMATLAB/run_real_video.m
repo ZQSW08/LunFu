@@ -21,6 +21,16 @@ tt=tic;
 for axisId=ids
     key='x';if axisId==2,key='y';end
     result.signals.(key)=mfm.clean_signal(result.relative(:,axisId),result.fps,u.analysisBandHz,u.denoise);
+    if ~isempty(u.motionCutoffHz)
+        separated=mfm.separate_motion(result.relative(:,axisId),result.fps,u.motionCutoffHz,u.motionOrder);
+        result.motionSeparation.(key)=separated;
+        writetable(table(result.time,result.relative(:,axisId),separated.trend,separated.vibration,separated.interior,...
+            'VariableNames',{'time_s','raw_px','smooth_motion_px','vibration_candidate_px','interior_valid'}),...
+            fullfile(output,['motion_separation_' key '.csv']));
+        writetable(table(separated.frequency,separated.vibrationGain,...
+            'VariableNames',{'frequency_Hz','theoretical_vibration_gain'}),...
+            fullfile(output,['motion_transfer_' key '.csv']));
+    end
 end
 result.postprocessSeconds=toc(tt);save(fullfile(output,'result.mat'),'-struct','result','-v7');
 fid=fopen(fullfile(output,'roi_provenance.json'),'w');fwrite(fid,jsonencode(provenance,'PrettyPrint',true),'char');fclose(fid);
