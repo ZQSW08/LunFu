@@ -1,6 +1,6 @@
 function test_auto_reference()
 % Geometry-only automatic-reference contracts; no video or temporal fitting.
-root=fileparts(mfilename('fullpath'));addpath(root);c=mfm.defaults();
+scriptRoot=fileparts(mfilename('fullpath'));projectRoot=fileparts(fileparts(scriptRoot));addpath(fullfile(projectRoot,'src'));root=projectRoot;c=mfm.defaults();
 targetTotal=[80 -50];refs=repmat([3.2 -1.7],5,1)+[0 0;.05 -.03;-.04 .02;.02 .04;-.03 -.02];
 [m,ok,d]=mfm.reference_consensus(refs,true(5,1),c);assert(ok&&d.support==5&&norm(m-[3.2 -1.7])<.03);
 assert(norm((targetTotal-m)-[76.8 -48.3])<.03,'Target displacement entered reference estimate');
@@ -26,3 +26,5 @@ end
 function yes=rect_overlap(a,b)
 yes=a(1)<=b(1)+b(3)-1&&b(1)<=a(1)+a(3)-1&&a(2)<=b(2)+b(4)-1&&b(2)<=a(2)+a(4)-1;
 end
+
+

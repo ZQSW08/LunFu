@@ -1,5 +1,5 @@
 function test_upgrade()
-root=fileparts(mfilename('fullpath'));addpath(root);rng(3091);fs=100;t=(0:1199)'/fs;
+scriptRoot=fileparts(mfilename('fullpath'));projectRoot=fileparts(fileparts(scriptRoot));addpath(fullfile(projectRoot,'src'));root=projectRoot;rng(3091);fs=100;t=(0:1199)'/fs;
 z=.2*sin(2*pi*11.3*t)+.13*sin(2*pi*23.7*t);x=z+.04*randn(size(t));s=mfm.clean_signal(x,fs,[2 45],true);
 assert(numel(s.modesHz)>=2&&min(abs(s.modesHz-11.3))<.6&&min(abs(s.modesHz-23.7))<.6,'Lost a true mode');
 ids=100:1100;before=sqrt(mean((s.broad(ids)-z(ids)).^2));after=sqrt(mean((s.clean(ids)-z(ids)).^2));assert(after<before,'No denoising gain');
@@ -10,3 +10,4 @@ u=mfm.real_defaults();u.referenceModel='none';u.videoPath='C:/0819/2-5mvpp-motio
 assert(~isfield(u,'laserPath')&&~isfield(u,'expectedFrequencyHz'));
 test_contracts();fprintf('UPGRADE PASS: two non-integer modes retained; noise rejected; gap preserved; exact saved ROI. RMSE %.5f -> %.5f px\n',before,after);
 end
+

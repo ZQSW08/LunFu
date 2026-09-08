@@ -1,6 +1,6 @@
 function test_audit_contracts()
 % No real laser required; executable boundaries for raw output and ROI modes.
-root=fileparts(mfilename('fullpath'));addpath(root);
+scriptRoot=fileparts(mfilename('fullpath'));projectRoot=fileparts(fileparts(scriptRoot));addpath(fullfile(projectRoot,'src'));root=projectRoot;
 im=uint8(80*ones(180,240));u=mfm.real_defaults();u.videoPath='arbitrary_unseen_name.avi';
 u.roiMode='manual';u.targetROI=[20 30 40 50];u.referenceROIs=[100 80 40 50];
 [roi,refs,~,model,samples,guide]=mfm.resolve_rois(u,im);
@@ -18,4 +18,6 @@ assert(strcmp(s.status,'unfiltered_measurement')&&isempty(s.modesHz));
 test_contracts();
 fprintf('AUDIT CONTRACT PASS: filename invariance; explicit references; finite ROI; exact raw passthrough; gaps preserved.\n');
 end
+
+
 

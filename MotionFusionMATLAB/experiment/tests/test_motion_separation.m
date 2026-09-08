@@ -1,4 +1,5 @@
 function test_motion_separation
+scriptRoot=fileparts(mfilename('fullpath'));projectRoot=fileparts(fileparts(scriptRoot));addpath(fullfile(projectRoot,'src'));root=projectRoot;
 fs=100;t=(0:1999)'/fs;slow=10*sin(2*pi*.2*t);vib=.1*sin(2*pi*8*t);
 tic;s=mfm.separate_motion(slow+vib,fs,1);seconds=toc;
 mask=s.interior;rmse=sqrt(mean((s.vibration(mask)-vib(mask)).^2));
@@ -14,3 +15,4 @@ assert(sqrt(mean((high.vibration(mask4)-vib(mask4)).^2))<.01,'Fourth-order prese
 assert(all(high.vibrationGain>=0&high.vibrationGain<=1),'Invalid transfer gain');
 fprintf('motion separation: RMSE %.6g px, %.6g s, low-frequency gain %.6g\n',rmse,seconds,ratio);
 end
+

@@ -1,5 +1,5 @@
 function test_direction_and_speed()
-root=fileparts(mfilename('fullpath'));addpath(root);out=fullfile(root,'outputs',['contracts_' datestr(now,'yyyymmdd_HHMMSS')]);mkdir(out);
+scriptRoot=fileparts(mfilename('fullpath'));projectRoot=fileparts(fileparts(scriptRoot));addpath(fullfile(projectRoot,'src'));root=projectRoot;out=fullfile(root,'outputs',['contracts_' datestr(now,'yyyymmdd_HHMMSS')]);mkdir(out);
 source=fullfile(root,'outputs','synthetic_release','fast6_seed42.avi');truth=load(fullfile(root,'outputs','synthetic_release','fast6_seed42','truth.mat'),'rois');
 v=VideoReader(source);dest=fullfile(out,'transposed.avi');w=VideoWriter(dest,'Motion JPEG AVI');w.Quality=100;w.FrameRate=v.FrameRate;open(w);
 for k=1:60,im=readFrame(v);writeVideo(w,permute(im,[2 1 3]));end;close(w);
@@ -10,3 +10,5 @@ c.video=source;c.rois=truth.rois;c.axis='x';c.fastSearch=true;c.output=fullfile(
 good=a.geometryValid&f.geometryValid;delta=sqrt(mean((a.relative(good,1)-f.relative(good,1)).^2));assert(delta<.01,'Fast search changed metrology');
 save(fullfile(out,'checks.mat'),'error','delta');fprintf('PASS y transpose RMSE %.5f px; fast/standard difference %.5f px.\n',error,delta);
 end
+
+
