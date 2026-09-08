@@ -1,5 +1,6 @@
 %% 07-26_single 视频与三角光相对波形对比
 % 本脚本只做测量完成后的独立评价，不参与ROI、跟踪、参数或频带选择。
+% 使用批处理结果中已经完成band/clean的波形；三角光也使用同一频带。
 % 三角光CSV没有时间列，因此按实验约定使用100 Hz，并在结果中记录这一假设。
 close all; clearvars; clc;
 scriptRoot=fileparts(mfilename('fullpath'));
@@ -55,14 +56,20 @@ end
 fprintf('\n07-26_single相对波形对比完成。三角光采样率按100 Hz记录；未进行物理标定。\n');
 
 function [row,a]=compare_one(r,sensorPath,sensorFPS,videoAxis,minOverlap,removeTrend,allowFlip)
-assert(isfield(r,'relative')&&isfield(r,'fps')&&isfield(r,'time'),'result.mat缺少relative、fps或time字段');
+assert(isfield(r,'signals')&&isfield(r,'fps'),'result.mat缺少signals或fps字段');
 axisId=1; if strcmpi(videoAxis,'y'),axisId=2; end
-video=double(r.relative(:,axisId)); videoFPS=double(r.fps); assert(videoFPS>0,'视频采样率无效');
+key='x'; if axisId==2, key='y'; end
+assert(isfield(r.signals,key),'result.mat没有对应方向的处理信号'); s=r.signals.(key);
+assert(isfield(s,'bandHz')&&~isempty(s.bandHz),'视频结果没有明确analysisBandHz，不能进行带通对比');
+bandHz=double(s.bandHz); videoSignalKind='broad_band';
+if isfield(s,'clean')&&nnz(isfinite(s.clean))>=20, video=double(s.clean); videoSignalKind='clean_modal_or_filtered'; else, video=double(s.broad); end
+videoFPS=double(r.fps); assert(videoFPS>0,'视频采样率无效');
 M=readmatrix(sensorPath); assert(size(M,2)>=4,'三角光CSV少于4列，无法读取两个通道');
 [tri,channel,quality]=choose_sensor_channel(M(:,3:4));
 % 去除CSV首尾非数值记录；内部少量缺失只在评价信号中线性补齐。
-valid=isfinite(tri); assert(nnz(valid)>=20,'三角光有效样本太少'); first=find(valid,1,'first'); last=find(valid,1,'last'); tri=tri(first:last); tri=fillmissing(tri,'linear','EndValues','nearest');
-validVideo=isfinite(video); assert(nnz(validVideo)>=20,'视频有效样本太少'); video=fillmissing(video,'linear','EndValues','nearest');
+valid=isfinite(tri); assert(nnz(valid)>=20,'三角光有效样本太少'); first=find(valid,1,'first'); last=find(valid,1,'last'); tri=tri(first:last);
+tri=mfm.band_segments(tri,sensorFPS,bandHz); tri=fillmissing(tri,'linear','EndValues','nearest');
+assert(nnz(isfinite(video))>=20,'视频有效样本太少'); video=fillmissing(video,'linear','EndValues','nearest');
 videoTime=(0:numel(video)-1)'/videoFPS;
 commonTime=(0:1/sensorFPS:videoTime(end))'; video100=interp1(videoTime,video,commonTime,'linear','extrap');
 if removeTrend, videoForAlign=detrend(video100); sensorForAlign=detrend(tri); else, videoForAlign=video100-mean(video100); sensorForAlign=tri-mean(tri); end
@@ -81,8 +88,8 @@ sensorSegment=tri(sensorStart:sensorStart+n-1); videoSegment=video100(videoStart
 sensorNorm=normalize_relative(sensorSegment); videoNorm=normalize_relative(videoSegment); pcc=corr(videoNorm,sensorNorm,'Rows','complete'); polarity=1; if allowFlip&&pcc<0,polarity=-1;end
 sensorPlot=polarity*sensorNorm; pccAbs=abs(pcc); rmse=sqrt(mean((videoNorm-sensorPlot).^2));
 [av,fv]=one_sided_spectrum(videoNorm,sensorFPS); [as,fs]=one_sided_spectrum(sensorPlot,sensorFPS);
-row=struct('sensorChannel',channel,'sensorQualityChannel1',quality(1),'sensorQualityChannel2',quality(2),'sensorFPS',sensorFPS,'videoFPS',videoFPS,'sensorLeadSamples',lag,'sensorLeadSeconds',lag/sensorFPS,'commonSamples',n,'commonDurationSeconds',(n-1)/sensorFPS,'pccSigned',pcc,'pccAbsolute',pccAbs,'rmseNormalized',rmse,'polarityForDisplay',polarity,'status','evaluated');
-a=struct('time',(0:n-1)'/sensorFPS,'video',videoNorm,'sensor',sensorPlot,'videoSpectrum',av,'videoFrequency',fv,'sensorSpectrum',as,'sensorFrequency',fs,'rawVideo',videoSegment,'rawSensor',sensorSegment,'channel',channel,'channelQuality',quality,'lagSamples',lag,'sensorFPS',sensorFPS,'videoFPS',videoFPS);
+row=struct('videoSignalKind',videoSignalKind,'bandLowHz',bandHz(1),'bandHighHz',bandHz(2),'sensorChannel',channel,'sensorQualityChannel1',quality(1),'sensorQualityChannel2',quality(2),'sensorFPS',sensorFPS,'videoFPS',videoFPS,'sensorLeadSamples',lag,'sensorLeadSeconds',lag/sensorFPS,'commonSamples',n,'commonDurationSeconds',(n-1)/sensorFPS,'pccSigned',pcc,'pccAbsolute',pccAbs,'rmseNormalized',rmse,'polarityForDisplay',polarity,'status','evaluated');
+a=struct('time',(0:n-1)'/sensorFPS,'video',videoNorm,'sensor',sensorPlot,'videoSpectrum',av,'videoFrequency',fv,'sensorSpectrum',as,'sensorFrequency',fs,'bandHz',bandHz,'videoSignalKind',videoSignalKind,'rawVideo',videoSegment,'rawSensor',sensorSegment,'channel',channel,'channelQuality',quality,'lagSamples',lag,'sensorFPS',sensorFPS,'videoFPS',videoFPS);
 end
 
 function [x,channel,quality]=choose_sensor_channel(channels)
@@ -101,9 +108,9 @@ function [a,f]=one_sided_spectrum(x,fs)
 z=x(:); z=z-mean(z); n=numel(z); nfft=2^nextpow2(max(n,2)); w=hann(n); y=fft(z.*w,nfft); a=abs(y(1:nfft/2+1))/max(sum(w),eps)*2; a(1)=a(1)/2; f=(0:nfft/2)'*fs/nfft; a=a/max(max(a),eps);
 end
 function write_comparison_outputs(a,outDir,name,showFigures)
-t=table(a.time,a.video,a.sensor,'VariableNames',{'time_s','video_normalized','triangulation_normalized'}); writetable(t,fullfile(outDir,'aligned_relative_waveforms.csv'));
-fig=figure('Visible','off','Color','w'); plot(a.time,a.video,'LineWidth',1); hold on; plot(a.time,a.sensor,'--','LineWidth',1); grid on; xlabel('Aligned time (s)'); ylabel('Relative normalized amplitude'); title([name ' video vs triangulation'],'Interpreter','none'); legend('Video','Triangulation','Location','best'); save_visible(fig,fullfile(outDir,'aligned_relative_waveforms.fig'),fullfile(outDir,'aligned_relative_waveforms.png'),showFigures);
-fig=figure('Visible','off','Color','w'); plot(a.videoFrequency,a.videoSpectrum,'LineWidth',1); hold on; plot(a.sensorFrequency,a.sensorSpectrum,'--','LineWidth',1); grid on; xlabel('Frequency (Hz)'); ylabel('Normalized amplitude'); title([name ' relative spectra'],'Interpreter','none'); legend('Video','Triangulation','Location','best'); save_visible(fig,fullfile(outDir,'aligned_relative_spectra.fig'),fullfile(outDir,'aligned_relative_spectra.png'),showFigures);
+t=table(a.time,a.video,a.sensor,'VariableNames',{'time_s','video_bandpassed_normalized','triangulation_bandpassed_normalized'}); writetable(t,fullfile(outDir,'aligned_relative_waveforms.csv'));
+fig=figure('Visible','off','Color','w'); plot(a.time,a.video,'LineWidth',1); hold on; plot(a.time,a.sensor,'--','LineWidth',1); grid on; xlabel('Aligned time (s)'); ylabel('Bandpassed normalized relative amplitude'); title([name ' bandpassed video vs triangulation'],'Interpreter','none'); legend('Video processed signal','Triangulation bandpassed','Location','best'); save_visible(fig,fullfile(outDir,'aligned_relative_waveforms.fig'),fullfile(outDir,'aligned_relative_waveforms.png'),showFigures);
+fig=figure('Visible','off','Color','w'); plot(a.videoFrequency,a.videoSpectrum,'LineWidth',1); hold on; plot(a.sensorFrequency,a.sensorSpectrum,'--','LineWidth',1); grid on; xlabel('Frequency (Hz)'); ylabel('Normalized amplitude'); title(sprintf('%s normalized bandpassed spectra (%.3g-%.3g Hz)',name,a.bandHz(1),a.bandHz(2)),'Interpreter','none'); legend('Video processed signal','Triangulation bandpassed','Location','best'); save_visible(fig,fullfile(outDir,'aligned_relative_spectra.fig'),fullfile(outDir,'aligned_relative_spectra.png'),showFigures);
 save(fullfile(outDir,'alignment.mat'),'-struct','a','-v7');
 end
 function save_visible(fig,figPath,pngPath,showFigures)
