@@ -2,9 +2,11 @@ function out=clean_signal(x,fs,band,enabled)
 % Video-only modal extraction: stable spectral evidence in >=2 time blocks.
 % Outputs BOTH broad measured component and explicitly model-filtered component.
 if isempty(band)
-    assert(~enabled,'Set an explicit analysisBandHz before requesting legacy modal filtering');
+    status='unfiltered_measurement';
+    if enabled,status='denoise_disabled_no_analysis_band';end
     out=struct('raw',x,'broad',x,'clean',x,'modesHz',[],'bandsHz',[],...
-        'status','unfiltered_measurement','retainedPowerFraction',NaN,'removedRMS',0,'bandHz',[]);
+        'status',status,'retainedPowerFraction',NaN,'removedRMS',0,'bandHz',[],...
+        'denoiseRequestedWithoutBand',logical(enabled));
     return;
 end
 band(2)=min(band(2),.45*fs);assert(band(1)>0&&band(2)>band(1),'Invalid analysis band');

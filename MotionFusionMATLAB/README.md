@@ -59,6 +59,8 @@ r=run_real_video(u);
 - `tracking_overlay.avi`：直接在视频帧像素上叠加目标 ROI、参考 ROI 和有效性线型后写出的唯一追踪视频，不创建 MATLAB FIG 播放视频。它只用于检查跟踪效果，写入时间由 `result.trackingVideoSeconds` 单独记录，不计入 `result.algorithmSeconds`。
 - `04_optional_filter_x/y`：仅在填写 analysisBandHz 后生成的额外诊断；denoise=true 启用视频证据筛选的稳定模态分量。它不替代原始测量，滤波后干净不等于原始精度提高。
 
+`analysisBandHz=[]` 时即使误将 `denoise=true`，程序也会安全降级为原始测量并在 `signal_*.json` 中记录 `denoise_disabled_no_analysis_band`，不会在视频处理结束时中止。需要模态诊断时同时设置有效频带，例如 `[2 45]`（且必须低于奈奎斯特频率）。
+
 所有 FIG 保存时 Visible='on'。showFigures=false 只在保存后关闭窗口。位移单位为 px；毫米振幅需要独立成像标定。参考和目标共享的真实刚体振动也会被扣除，因此测量量主要是相对于参考的局部运动。
 
 默认 `mfm.real_defaults()` 开启 `exportTrackingVideo=true`；设置为 false 可关闭视频写出。追踪视频导出失败不会覆盖已保存的测量结果，错误写入 `tracking_video_error.txt`，并在 `result.trackingVideo.status` 中标记。
